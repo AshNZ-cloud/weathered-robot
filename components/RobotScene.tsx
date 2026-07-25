@@ -1010,7 +1010,7 @@ export default function RobotScene() {
       const MAX_BOLTS = 20;
       let fireTimer = 0;
       const FIRE_DURATION = 0.6;
-      let walkDirection = 0;
+      const pressedKeys = new Set<string>();
       let walkPhase = 0;
       const WALK_SPEED = 2.5;
 
@@ -1076,43 +1076,43 @@ export default function RobotScene() {
         fireBolt(getWorldPos(armR.gunGroup), dirR);
       }
 
-      renderer.domElement.tabIndex = 0;
-      renderer.domElement.style.outline = "none";
-      renderer.domElement.focus();
+      mount.tabIndex = 0;
+      mount.style.outline = "none";
+      mount.focus();
 
       function onPointerDown(e: PointerEvent) {
-        if (e.target !== renderer.domElement) return;
-        renderer.domElement.focus();
+        mount.focus();
         fireBothGuns();
       }
 
       function onKeyDown(e: KeyboardEvent) {
-        if (e.code === "Space" || e.key === " ") {
+        const key = e.code || e.key;
+        pressedKeys.add(key);
+        if (key === "Space" || key === " ") {
           e.preventDefault();
           e.stopPropagation();
           fireBothGuns();
-        } else if (e.code === "ArrowUp" || e.key === "ArrowUp") {
+        } else if (key === "ArrowUp" || key === "ArrowDown" || key === "ArrowLeft" || key === "ArrowRight") {
           e.preventDefault();
-          walkDirection = 1;
-        } else if (e.code === "ArrowDown" || e.key === "ArrowDown") {
-          e.preventDefault();
-          walkDirection = -1;
+          e.stopPropagation();
         }
       }
 
       function onKeyUp(e: KeyboardEvent) {
-        if (e.code === "ArrowUp" || e.key === "ArrowUp") {
-          if (walkDirection === 1) walkDirection = 0;
-        } else if (e.code === "ArrowDown" || e.key === "ArrowDown") {
-          if (walkDirection === -1) walkDirection = 0;
-        }
+        const key = e.code || e.key;
+        pressedKeys.delete(key);
       }
 
-      document.addEventListener("pointerdown", onPointerDown);
+      function onBlur() {
+        pressedKeys.clear();
+      }
+
+      mount.addEventListener("pointerdown", onPointerDown);
+      mount.addEventListener("keydown", onKeyDown);
+      mount.addEventListener("keyup", onKeyUp);
+      mount.addEventListener("blur", onBlur);
       document.addEventListener("keydown", onKeyDown);
       document.addEventListener("keyup", onKeyUp);
-      window.addEventListener("keydown", onKeyDown);
-      renderer.domElement.addEventListener("keydown", onKeyDown);
 
       // ---------- Instructions overlay ----------
       const info = document.createElement("div");
@@ -1130,7 +1130,7 @@ export default function RobotScene() {
         pointer-events: none;
         line-height: 1.5;
       `;
-      info.textContent = `WebGL | SPACE to fire plasma guns. UP/DOWN arrows to walk. Robot dog companion included. Drag to orbit, scroll to zoom.`;
+      info.textContent = `WebGL | SPACE to fire. Arrow keys to walk (UP/DOWN/LEFT/RIGHT). Click scene first. Drag to orbit, scroll to zoom.`;
       document.body.appendChild(info);
 
       const linkEl = document.createElement("link");
@@ -1224,15 +1224,21 @@ export default function RobotScene() {
         }
 
         // ---------- Walk animation ----------
-        if (walkDirection !== 0) {
-          walkPhase += dt * WALK_SPEED * (walkDirection > 0 ? 1 : -1);
-          robot.position.z += walkDirection * dt * 1.5;
+        const moveForward = pressedKeys.has("ArrowUp") ? 1 : (pressedKeys.has("ArrowDown") ? -1 : 0);
+        const moveStrafe = pressedKeys.has("ArrowRight") ? 1 : (pressedKeys.has("ArrowLeft") ? -1 : 0);
+        const isMoving = moveForward !== 0 || moveStrafe !== 0;
+
+        if (isMoving) {
+          walkPhase += dt * WALK_SPEED;
+          robot.position.z += moveForward * dt * 1.5;
+          robot.position.x += moveStrafe * dt * 1.5;
           robot.position.z = Math.max(-12, Math.min(12, robot.position.z));
+          robot.position.x = Math.max(-12, Math.min(12, robot.position.x));
         } else {
           walkPhase *= 0.85;
         }
 
-        const walkActive = Math.abs(walkPhase) > 0.01 || walkDirection !== 0;
+        const walkActive = Math.abs(walkPhase) > 0.01 || isMoving;
         const swing = Math.sin(walkPhase);
         const swing2 = Math.sin(walkPhase + Math.PI);
 
@@ -1289,11 +1295,12 @@ export default function RobotScene() {
 
       // ---------- Cleanup ----------
       return () => {
-        document.removeEventListener("pointerdown", onPointerDown);
+        mount.removeEventListener("pointerdown", onPointerDown);
+        mount.removeEventListener("keydown", onKeyDown);
+        mount.removeEventListener("keyup", onKeyUp);
+        mount.removeEventListener("blur", onBlur);
         document.removeEventListener("keydown", onKeyDown);
         document.removeEventListener("keyup", onKeyUp);
-        window.removeEventListener("keydown", onKeyDown);
-        renderer.domElement.removeEventListener("keydown", onKeyDown);
         window.removeEventListener("resize", onResize);
         renderer.setAnimationLoop(null);
         renderer.dispose();
