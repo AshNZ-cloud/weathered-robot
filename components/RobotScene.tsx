@@ -534,6 +534,289 @@ export default function RobotScene() {
       const legR = makeLeg("R");
       robot.add(legR.legGroup);
 
+      // ---------- ROBOT DOG ----------
+      const dog = new THREE.Group();
+      dog.name = "robotDog";
+      dog.position.set(-5.5, 0, 1);
+      scene.add(dog);
+
+      // Dog materials — cleaner than the robot, fewer scratches
+      const dogBodyMat = new THREE.MeshStandardMaterial({
+        color: 0x5a6470,
+        roughness: 0.45,
+        metalness: 0.75,
+      });
+      const dogHeadMat = new THREE.MeshStandardMaterial({
+        color: 0x6a7480,
+        roughness: 0.4,
+        metalness: 0.8,
+      });
+      const dogBoltMat = new THREE.MeshStandardMaterial({
+        color: 0x8a9aaa,
+        roughness: 0.3,
+        metalness: 0.9,
+      });
+      const dogJointMat = new THREE.MeshStandardMaterial({
+        color: 0x3a4048,
+        roughness: 0.6,
+        metalness: 0.7,
+      });
+      const dogEyeMat = new THREE.MeshStandardMaterial({
+        color: 0x33ffaa,
+        emissive: 0x22ffaa,
+        emissiveIntensity: 1.5,
+        roughness: 0.2,
+      });
+
+      // Body — boxy ribcage
+      const dogBody = new THREE.Mesh(
+        new THREE.BoxGeometry(0.9, 0.55, 0.5),
+        dogBodyMat
+      );
+      dogBody.name = "dogBody";
+      dogBody.position.y = 0.55;
+      dogBody.castShadow = true;
+      dogBody.receiveShadow = true;
+      dog.add(dogBody);
+
+      // A few scratches on the body
+      for (let i = 0; i < 4; i++) {
+        const scratch = new THREE.Mesh(
+          new THREE.BoxGeometry(0.15, 0.02, 0.02),
+          new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.5, metalness: 0.6 })
+        );
+        scratch.name = `dogScratch${i}`;
+        scratch.position.set(
+          -0.3 + i * 0.2,
+          0.55 + (Math.random() - 0.5) * 0.3,
+          0.26
+        );
+        scratch.rotation.z = (Math.random() - 0.5) * 0.5;
+        dog.add(scratch);
+      }
+
+      // Chest plate with bolts
+      const dogChest = new THREE.Mesh(
+        new THREE.BoxGeometry(0.25, 0.4, 0.1),
+        dogBoltMat
+      );
+      dogChest.name = "dogChest";
+      dogChest.position.set(0.4, 0.55, 0);
+      dog.add(dogChest);
+
+      // Bolts on chest plate
+      for (let i = 0; i < 4; i++) {
+        const bolt = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.03, 0.03, 0.04, 6),
+          dogJointMat
+        );
+        bolt.name = `dogChestBolt${i}`;
+        bolt.rotation.x = Math.PI / 2;
+        bolt.position.set(0.46, 0.45 + (i % 2) * 0.2, -0.08 + Math.floor(i / 2) * 0.16);
+        dog.add(bolt);
+      }
+
+      // Head
+      const dogHead = new THREE.Mesh(
+        new THREE.BoxGeometry(0.4, 0.38, 0.38),
+        dogHeadMat
+      );
+      dogHead.name = "dogHead";
+      dogHead.position.set(0.6, 0.72, 0);
+      dogHead.castShadow = true;
+      dog.add(dogHead);
+
+      // Snout
+      const dogSnout = new THREE.Mesh(
+        new THREE.BoxGeometry(0.25, 0.18, 0.24),
+        dogBodyMat
+      );
+      dogSnout.name = "dogSnout";
+      dogSnout.position.set(0.85, 0.65, 0);
+      dog.add(dogSnout);
+
+      // Nose
+      const dogNose = new THREE.Mesh(
+        new THREE.SphereGeometry(0.05, 8, 8),
+        new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.3, metalness: 0.5 })
+      );
+      dogNose.name = "dogNose";
+      dogNose.position.set(0.98, 0.68, 0);
+      dog.add(dogNose);
+
+      // Eyes
+      const dogEyeL = new THREE.Mesh(
+        new THREE.SphereGeometry(0.05, 10, 10),
+        dogEyeMat
+      );
+      dogEyeL.name = "dogEyeL";
+      dogEyeL.position.set(0.72, 0.8, 0.12);
+      dog.add(dogEyeL);
+      const dogEyeR = new THREE.Mesh(
+        new THREE.SphereGeometry(0.05, 10, 10),
+        dogEyeMat
+      );
+      dogEyeR.name = "dogEyeR";
+      dogEyeR.position.set(0.72, 0.8, -0.12);
+      dog.add(dogEyeR);
+
+      // Floppy ears — hanging down on sides of head
+      function makeDogEar(side: string) {
+        const sign = side === "L" ? 1 : -1;
+        const earGroup = new THREE.Group();
+        earGroup.name = `dogEar_${side}`;
+        earGroup.position.set(0.55, 0.88, sign * 0.2);
+
+        const ear = new THREE.Mesh(
+          new THREE.BoxGeometry(0.12, 0.3, 0.08),
+          dogBodyMat
+        );
+        ear.name = `ear_${side}`;
+        ear.position.y = -0.13;
+        ear.castShadow = true;
+        earGroup.add(ear);
+
+        // Bolt at ear base
+        const earBolt = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.025, 0.025, 0.05, 6),
+          dogBoltMat
+        );
+        earBolt.name = `earBolt_${side}`;
+        earBolt.rotation.x = Math.PI / 2;
+        earBolt.position.z = sign * 0.04;
+        earGroup.add(earBolt);
+
+        return earGroup;
+      }
+      const earL = makeDogEar("L");
+      dog.add(earL);
+      const earR = makeDogEar("R");
+      dog.add(earR);
+
+      // Neck bolts
+      for (let i = 0; i < 2; i++) {
+        const neckBolt = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.025, 0.025, 0.05, 6),
+          dogBoltMat
+        );
+        neckBolt.name = `dogNeckBolt${i}`;
+        neckBolt.rotation.z = Math.PI / 2;
+        neckBolt.position.set(0.5, 0.65, -0.1 + i * 0.2);
+        dog.add(neckBolt);
+      }
+
+      // Legs — 4 bolted legs with visible bolts at joints
+      function makeDogLeg(side: string, front: boolean) {
+        const sign = side === "L" ? 1 : -1;
+        const x = front ? 0.3 : -0.3;
+        const legGroup = new THREE.Group();
+        legGroup.name = `dogLeg_${side}_${front ? "F" : "B"}`;
+        legGroup.position.set(x, 0.35, sign * 0.22);
+
+        const upper = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.07, 0.06, 0.35, 8),
+          dogBodyMat
+        );
+        upper.name = `dogUpperLeg_${side}_${front ? "F" : "B"}`;
+        upper.position.y = -0.17;
+        upper.castShadow = true;
+        legGroup.add(upper);
+
+        // Joint bolt at knee
+        const kneeBolt = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.04, 0.04, 0.08, 6),
+          dogBoltMat
+        );
+        kneeBolt.name = `dogKneeBolt_${side}_${front ? "F" : "B"}`;
+        kneeBolt.rotation.x = Math.PI / 2;
+        kneeBolt.position.set(0, -0.34, sign * 0.04);
+        legGroup.add(kneeBolt);
+
+        const lower = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.06, 0.05, 0.3, 8),
+          dogHeadMat
+        );
+        lower.name = `dogLowerLeg_${side}_${front ? "F" : "B"}`;
+        lower.position.y = -0.5;
+        lower.castShadow = true;
+        legGroup.add(lower);
+
+        // Paw
+        const paw = new THREE.Mesh(
+          new THREE.BoxGeometry(0.1, 0.06, 0.12),
+          dogJointMat
+        );
+        paw.name = `dogPaw_${side}_${front ? "F" : "B"}`;
+        paw.position.set(0.02, -0.66, 0);
+        paw.castShadow = true;
+        legGroup.add(paw);
+
+        return legGroup;
+      }
+      dog.add(makeDogLeg("L", true));
+      dog.add(makeDogLeg("R", true));
+      dog.add(makeDogLeg("L", false));
+      dog.add(makeDogLeg("R", false));
+
+      // Tail — reasonably upright, segmented with bolts
+      const tailBase = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.05, 0.04, 0.25, 8),
+        dogBodyMat
+      );
+      tailBase.name = "dogTailBase";
+      tailBase.position.set(-0.5, 0.75, 0);
+      tailBase.rotation.z = 0.6;
+      tailBase.castShadow = true;
+      dog.add(tailBase);
+
+      const tailMid = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.04, 0.03, 0.22, 8),
+        dogHeadMat
+      );
+      tailMid.name = "dogTailMid";
+      tailMid.position.set(-0.68, 0.92, 0);
+      tailMid.rotation.z = 0.6;
+      dog.add(tailMid);
+
+      const tailTip = new THREE.Mesh(
+        new THREE.ConeGeometry(0.04, 0.15, 8),
+        dogBoltMat
+      );
+      tailTip.name = "dogTailTip";
+      tailTip.position.set(-0.82, 1.05, 0);
+      tailTip.rotation.z = 0.6;
+      dog.add(tailTip);
+
+      // Tail bolts at joints
+      const tailBolt1 = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.03, 0.03, 0.05, 6),
+        dogBoltMat
+      );
+      tailBolt1.name = "dogTailBolt1";
+      tailBolt1.position.set(-0.58, 0.83, 0);
+      tailBolt1.rotation.z = 0.6;
+      dog.add(tailBolt1);
+
+      const tailBolt2 = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.025, 0.025, 0.05, 6),
+        dogBoltMat
+      );
+      tailBolt2.name = "dogTailBolt2";
+      tailBolt2.position.set(-0.75, 0.99, 0);
+      tailBolt2.rotation.z = 0.6;
+      dog.add(tailBolt2);
+
+      // Body bolts along the spine
+      for (let i = 0; i < 3; i++) {
+        const spineBolt = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.03, 0.03, 0.04, 6),
+          dogBoltMat
+        );
+        spineBolt.name = `dogSpineBolt${i}`;
+        spineBolt.position.set(-0.2 + i * 0.2, 0.85, 0);
+        dog.add(spineBolt);
+      }
+
       // ---------- SPACESHIP ----------
       const ship = new THREE.Group();
       ship.name = "spaceship";
@@ -847,7 +1130,7 @@ export default function RobotScene() {
         pointer-events: none;
         line-height: 1.5;
       `;
-      info.textContent = `WebGL | SPACE to fire plasma guns. UP/DOWN arrows to walk. Drag to orbit, scroll to zoom.`;
+      info.textContent = `WebGL | SPACE to fire plasma guns. UP/DOWN arrows to walk. Robot dog companion included. Drag to orbit, scroll to zoom.`;
       document.body.appendChild(info);
 
       const linkEl = document.createElement("link");
@@ -968,6 +1251,16 @@ export default function RobotScene() {
         ship.position.y = 2.6 + Math.sin(t * 0.8) * 0.15;
         ship.rotation.z = Math.sin(t * 0.6) * 0.03;
         ship.rotation.x = Math.sin(t * 0.5 + 1) * 0.015;
+
+        // ---------- Dog idle animation ----------
+        dog.position.y = Math.sin(t * 2) * 0.02;
+        earL.rotation.z = Math.sin(t * 3) * 0.15;
+        earR.rotation.z = -Math.sin(t * 3) * 0.15;
+        tailBase.rotation.y = Math.sin(t * 5) * 0.3;
+        tailMid.rotation.y = Math.sin(t * 5 + 0.3) * 0.3;
+        tailTip.rotation.y = Math.sin(t * 5 + 0.6) * 0.3;
+        dogEyeL.material.emissiveIntensity = 1.2 + Math.sin(t * 4) * 0.4;
+        dogEyeR.material.emissiveIntensity = 1.2 + Math.sin(t * 4) * 0.4;
 
         for (let i = bolts.length - 1; i >= 0; i--) {
           const b = bolts[i];
