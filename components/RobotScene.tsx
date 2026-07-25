@@ -719,6 +719,8 @@ export default function RobotScene() {
       });
 
       const MAX_BOLTS = 20;
+      let fireTimer = 0;
+      const FIRE_DURATION = 0.6;
 
       function fireBolt(fromWorldPos: THREE.Vector3, direction: THREE.Vector3) {
         if (bolts.length >= MAX_BOLTS) {
@@ -740,6 +742,7 @@ export default function RobotScene() {
       }
 
       function fireBothGuns() {
+        fireTimer = FIRE_DURATION;
         const dirL = new THREE.Vector3(0, 0, 1).applyQuaternion(
           robot.getWorldQuaternion(new THREE.Quaternion())
         );
@@ -748,8 +751,12 @@ export default function RobotScene() {
         fireBolt(getWorldPos(armR.gunGroup), dirR.multiplyScalar(1));
       }
 
+      renderer.domElement.tabIndex = 0;
+      renderer.domElement.style.outline = "none";
+
       function onPointerDown(e: PointerEvent) {
         if (e.target !== renderer.domElement) return;
+        renderer.domElement.focus();
         fireBothGuns();
       }
 
@@ -762,6 +769,7 @@ export default function RobotScene() {
 
       window.addEventListener("pointerdown", onPointerDown);
       window.addEventListener("keydown", onKeyDown);
+      renderer.domElement.addEventListener("keydown", onKeyDown);
 
       // ---------- Instructions overlay ----------
       const info = document.createElement("div");
@@ -853,8 +861,24 @@ export default function RobotScene() {
         chestCore.material.emissiveIntensity = 1.0 + Math.sin(t * 2.5) * 0.5;
         antennaTip.material.emissiveIntensity = 0.9 + Math.sin(t * 6) * 0.5;
 
-        armL.armGroup.rotation.x = Math.sin(t * 1.2) * 0.05;
-        armR.armGroup.rotation.x = Math.sin(t * 1.2 + Math.PI) * 0.05;
+        if (fireTimer > 0) fireTimer -= dt;
+        const fireBlend = Math.max(0, fireTimer / FIRE_DURATION);
+        const ease = fireBlend * fireBlend * (3 - 2 * fireBlend);
+
+        armL.armGroup.rotation.x = Math.sin(t * 1.2) * 0.05 + ease * 1.4;
+        armR.armGroup.rotation.x = Math.sin(t * 1.2 + Math.PI) * 0.05 + ease * 1.4;
+
+        const emitterL = armL.gunGroup.getObjectByName("gunEmitter_L");
+        const emitterR = armR.gunGroup.getObjectByName("gunEmitter_R");
+        const glowIntensity = 2.2 + ease * 3;
+        if (emitterL) {
+          const matL = (emitterL as THREE.Mesh).material as THREE.MeshStandardMaterial;
+          matL.emissiveIntensity = glowIntensity;
+        }
+        if (emitterR) {
+          const matR = (emitterR as THREE.Mesh).material as THREE.MeshStandardMaterial;
+          matR.emissiveIntensity = glowIntensity;
+        }
 
         ship.position.y = 2.6 + Math.sin(t * 0.8) * 0.15;
         ship.rotation.z = Math.sin(t * 0.6) * 0.03;
