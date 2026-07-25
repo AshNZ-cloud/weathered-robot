@@ -29,31 +29,10 @@ export default function RobotScene() {
       );
       camera.position.set(7, 4, 9);
 
-      let useWebGPU = false;
-
-      if (navigator.gpu) {
-        try {
-          const { WebGPURenderer } = await import("three/webgpu");
-          renderer = new WebGPURenderer({
-            antialias: true,
-            powerPreference: "high-performance",
-          });
-          await renderer.init();
-          useWebGPU = true;
-          console.log("WebGPU renderer active");
-        } catch (e) {
-          console.warn("WebGPU init failed, falling back to WebGL:", e);
-          renderer = new THREE.WebGLRenderer({
-            antialias: true,
-            powerPreference: "high-performance",
-          });
-        }
-      } else {
-        renderer = new THREE.WebGLRenderer({
-          antialias: true,
-          powerPreference: "high-performance",
-        });
-      }
+      renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        powerPreference: "high-performance",
+      });
 
       if (disposed) {
         renderer.dispose();
@@ -61,7 +40,7 @@ export default function RobotScene() {
       }
 
       renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       mount.appendChild(renderer.domElement);
@@ -81,7 +60,7 @@ export default function RobotScene() {
       keyLight.name = "keyLight";
       keyLight.position.set(8, 12, 6);
       keyLight.castShadow = true;
-      keyLight.shadow.mapSize.set(1024, 1024);
+      keyLight.shadow.mapSize.set(512, 512);
       keyLight.shadow.camera.left = -15;
       keyLight.shadow.camera.right = 15;
       keyLight.shadow.camera.top = 15;
@@ -117,7 +96,7 @@ export default function RobotScene() {
 
       // ---------- Canvas texture helpers for battle-damage armor ----------
       function makeArmorTexture(baseHex: string, scratchDensity = 26) {
-        const size = 512;
+        const size = 256;
         const canvas = document.createElement("canvas");
         canvas.width = size;
         canvas.height = size;
@@ -190,7 +169,7 @@ export default function RobotScene() {
       }
 
       function makeHullTexture(baseHex: string, stripeHex: string) {
-        const size = 512;
+        const size = 256;
         const canvas = document.createElement("canvas");
         canvas.width = size;
         canvas.height = size;
@@ -493,11 +472,6 @@ export default function RobotScene() {
         emitter.position.z = 0.66;
         gunGroup.add(emitter);
 
-        const emitterGlow = new THREE.PointLight(0x33ffdd, 0.6, 2.5);
-        emitterGlow.name = `gunGlow_${side}`;
-        emitterGlow.position.z = 0.7;
-        gunGroup.add(emitterGlow);
-
         return { armGroup, forearmGroup, gunGroup };
       }
       const armL = makeArm("L");
@@ -576,14 +550,12 @@ export default function RobotScene() {
         roughness: 0.35,
         metalness: 0.7,
       });
-      const cockpitGlass = new THREE.MeshPhysicalMaterial({
+      const cockpitGlass = new THREE.MeshStandardMaterial({
         color: 0x1a2a44,
         roughness: 0.05,
         metalness: 0.1,
-        transmission: 0.6,
         transparent: true,
-        opacity: 0.85,
-        ior: 1.4,
+        opacity: 0.7,
       });
       const engineMat = new THREE.MeshStandardMaterial({
         color: 0x113355,
@@ -672,11 +644,6 @@ export default function RobotScene() {
         thruster.position.set(sign * 2.35, 0, 0);
         wingGroup.add(thruster);
 
-        const thrusterGlow = new THREE.PointLight(0x3388ff, 0.7, 3);
-        thrusterGlow.name = `wingThrusterGlow_${side}`;
-        thrusterGlow.position.set(sign * 2.5, 0, 0);
-        wingGroup.add(thrusterGlow);
-
         return wingGroup;
       }
       const wingL = makeWing("L");
@@ -725,10 +692,6 @@ export default function RobotScene() {
         nozzle.rotation.z = Math.PI / 2;
         nozzle.position.x = -0.42;
         eng.add(nozzle);
-        const glow = new THREE.PointLight(0x3388ff, 0.8, 3.5);
-        glow.name = `mainEngineGlow_${offsetZ > 0 ? "R" : "L"}`;
-        glow.position.x = -0.5;
-        eng.add(glow);
         eng.position.set(-1.9, -0.1, offsetZ);
         return eng;
       }
@@ -763,12 +726,9 @@ export default function RobotScene() {
           scene.remove(old.mesh);
           old.mesh.geometry.dispose();
         }
-        const mesh = new THREE.Mesh(boltGeo, boltMat.clone());
+        const mesh = new THREE.Mesh(boltGeo, boltMat);
         mesh.name = `plasmaBolt_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
         mesh.position.copy(fromWorldPos);
-        const light = new THREE.PointLight(0x33ffdd, 1.2, 3);
-        light.name = `${mesh.name}_light`;
-        mesh.add(light);
         scene.add(mesh);
         bolts.push({ mesh, direction: direction.clone(), life: 0 });
       }
@@ -819,7 +779,7 @@ export default function RobotScene() {
         pointer-events: none;
         line-height: 1.5;
       `;
-      info.textContent = `${useWebGPU ? "WebGPU" : "WebGL"} | Click or press SPACE to fire plasma guns. Drag to orbit, scroll to zoom.`;
+      info.textContent = `WebGL | Click or press SPACE to fire plasma guns. Drag to orbit, scroll to zoom.`;
       document.body.appendChild(info);
 
       const linkEl = document.createElement("link");
@@ -848,16 +808,15 @@ export default function RobotScene() {
         if (level === qualityLevel) return;
         qualityLevel = level;
         if (level <= 0) {
-          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 0.75));
-          keyLight.shadow.mapSize.set(512, 512);
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 0.5));
           keyLight.castShadow = false;
         } else if (level === 1) {
-          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 0.75));
           keyLight.shadow.mapSize.set(512, 512);
           keyLight.castShadow = true;
         } else {
-          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-          keyLight.shadow.mapSize.set(1024, 1024);
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
+          keyLight.shadow.mapSize.set(512, 512);
           keyLight.castShadow = true;
         }
         keyLight.shadow.map.needsUpdate = true;
@@ -875,7 +834,7 @@ export default function RobotScene() {
         qualityCheckTimer += dt;
         if (fpsAccum >= 0.5) {
           currentFPS = Math.round(fpsFrames / fpsAccum);
-          fpsDisplay.textContent = `${currentFPS} FPS | Q${qualityLevel} | ${useWebGPU ? "WebGPU" : "WebGL"} | ${bolts.length} bolts`;
+          fpsDisplay.textContent = `${currentFPS} FPS | Q${qualityLevel} | WebGL | ${bolts.length} bolts`;
           fpsFrames = 0;
           fpsAccum = 0;
         }
