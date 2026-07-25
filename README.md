@@ -1,6 +1,6 @@
-# Battle-worn robot with plasma guns
+# Weathered Robot
 
-Created with [Omma](https://omma.build)
+A 3D battle-worn robot with plasma guns and spaceship scene built with Three.js and Next.js.
 
 ## Setup
 
@@ -14,3 +14,10 @@ npm run dev
 ```bash
 npm run build
 ```
+
+## Tech Stack
+
+- Next.js 14 (App Router)
+- React 18
+- Three.js
+- TypeScript
