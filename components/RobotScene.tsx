@@ -740,8 +740,43 @@ export default function RobotScene() {
         return v;
       }
 
+      // ---------- Laser sound ----------
+      let audioCtx: AudioContext | null = null;
+      function playLaserSound() {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        }
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        const now = audioCtx.currentTime;
+
+        const osc1 = audioCtx.createOscillator();
+        const osc2 = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc1.type = "sawtooth";
+        osc1.frequency.setValueAtTime(1200, now);
+        osc1.frequency.exponentialRampToValueAtTime(200, now + 0.15);
+
+        osc2.type = "square";
+        osc2.frequency.setValueAtTime(800, now);
+        osc2.frequency.exponentialRampToValueAtTime(120, now + 0.12);
+
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc1.start(now);
+        osc2.start(now);
+        osc1.stop(now + 0.2);
+        osc2.stop(now + 0.2);
+      }
+
       function fireBothGuns() {
         fireTimer = FIRE_DURATION;
+        playLaserSound();
         const gunForward = new THREE.Vector3(0, 0, 1);
         const dirL = gunForward.clone().applyQuaternion(armL.gunGroup.getWorldQuaternion(new THREE.Quaternion()));
         const dirR = gunForward.clone().applyQuaternion(armR.gunGroup.getWorldQuaternion(new THREE.Quaternion()));
