@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useCallback } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 export default function RobotScene() {
   const mountRef = useRef<HTMLDivElement>(null);
+  const keysRef = useRef<Set<string>>(new Set());
+  const fireRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -1010,7 +1012,7 @@ export default function RobotScene() {
       const MAX_BOLTS = 20;
       let fireTimer = 0;
       const FIRE_DURATION = 0.6;
-      const pressedKeys = new Set<string>();
+      const pressedKeys = keysRef.current;
       let walkPhase = 0;
       const WALK_SPEED = 2.5;
 
@@ -1078,41 +1080,15 @@ export default function RobotScene() {
 
       mount.tabIndex = 0;
       mount.style.outline = "none";
-      mount.focus();
 
       function onPointerDown(e: PointerEvent) {
         mount.focus();
         fireBothGuns();
       }
 
-      function onKeyDown(e: KeyboardEvent) {
-        const key = e.code || e.key;
-        pressedKeys.add(key);
-        if (key === "Space" || key === " ") {
-          e.preventDefault();
-          e.stopPropagation();
-          fireBothGuns();
-        } else if (key === "ArrowUp" || key === "ArrowDown" || key === "ArrowLeft" || key === "ArrowRight") {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-      }
-
-      function onKeyUp(e: KeyboardEvent) {
-        const key = e.code || e.key;
-        pressedKeys.delete(key);
-      }
-
-      function onBlur() {
-        pressedKeys.clear();
-      }
+      fireRef.current = fireBothGuns;
 
       mount.addEventListener("pointerdown", onPointerDown);
-      mount.addEventListener("keydown", onKeyDown);
-      mount.addEventListener("keyup", onKeyUp);
-      mount.addEventListener("blur", onBlur);
-      document.addEventListener("keydown", onKeyDown);
-      document.addEventListener("keyup", onKeyUp);
 
       // ---------- Instructions overlay ----------
       const info = document.createElement("div");
@@ -1296,11 +1272,7 @@ export default function RobotScene() {
       // ---------- Cleanup ----------
       return () => {
         mount.removeEventListener("pointerdown", onPointerDown);
-        mount.removeEventListener("keydown", onKeyDown);
-        mount.removeEventListener("keyup", onKeyUp);
-        mount.removeEventListener("blur", onBlur);
-        document.removeEventListener("keydown", onKeyDown);
-        document.removeEventListener("keyup", onKeyUp);
+        fireRef.current = null;
         window.removeEventListener("resize", onResize);
         renderer.setAnimationLoop(null);
         renderer.dispose();
@@ -1325,5 +1297,86 @@ export default function RobotScene() {
     };
   }, []);
 
-  return <div ref={mountRef} style={{ width: "100%", height: "100%" }} />;
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const key = e.code || e.key;
+    keysRef.current.add(key);
+    if (key === "Space" || key === " ") {
+      e.preventDefault();
+      fireRef.current?.();
+    } else if (key === "ArrowUp" || key === "ArrowDown" || key === "ArrowLeft" || key === "ArrowRight") {
+      e.preventDefault();
+    }
+  }, []);
+
+  const handleKeyUp = useCallback((e: React.KeyboardEvent) => {
+    const key = e.code || e.key;
+    keysRef.current.delete(key);
+  }, []);
+
+  const handleBlur = useCallback(() => {
+    keysRef.current.clear();
+  }, []);
+
+  const handleButtonPress = useCallback((key: string) => {
+    keysRef.current.add(key);
+  }, []);
+
+  const handleButtonRelease = useCallback((key: string) => {
+    keysRef.current.delete(key);
+  }, []);
+
+  const handleFire = useCallback(() => {
+    fireRef.current?.();
+  }, []);
+
+  const btnStyle: React.CSSProperties = {
+    width: 48, height: 48, borderRadius: 8, border: "1px solid rgba(255,255,255,0.15)",
+    background: "rgba(30,34,42,0.85)", color: "#cfd6e4", fontSize: 20,
+    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+    userSelect: "none", touchAction: "none",
+  };
+
+  return (
+    <div
+      ref={mountRef}
+      style={{ width: "100%", height: "100%", outline: "none" }}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+      onKeyUp={handleKeyUp}
+      onBlur={handleBlur}
+    >
+      <div style={{ position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 8, zIndex: 50, pointerEvents: "auto" }}>
+        <button
+          style={btnStyle}
+          onPointerDown={(e) => { e.preventDefault(); handleButtonPress("ArrowLeft"); }}
+          onPointerUp={() => handleButtonRelease("ArrowLeft")}
+          onPointerLeave={() => handleButtonRelease("ArrowLeft")}
+        >←</button>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <button
+            style={btnStyle}
+            onPointerDown={(e) => { e.preventDefault(); handleButtonPress("ArrowUp"); }}
+            onPointerUp={() => handleButtonRelease("ArrowUp")}
+            onPointerLeave={() => handleButtonRelease("ArrowUp")}
+          >↑</button>
+          <button
+            style={btnStyle}
+            onPointerDown={(e) => { e.preventDefault(); handleButtonPress("ArrowDown"); }}
+            onPointerUp={() => handleButtonRelease("ArrowDown")}
+            onPointerLeave={() => handleButtonRelease("ArrowDown")}
+          >↓</button>
+        </div>
+        <button
+          style={btnStyle}
+          onPointerDown={(e) => { e.preventDefault(); handleButtonPress("ArrowRight"); }}
+            onPointerUp={() => handleButtonRelease("ArrowRight")}
+          onPointerLeave={() => handleButtonRelease("ArrowRight")}
+        >→</button>
+        <button
+          style={{ ...btnStyle, width: 64, background: "rgba(40,80,60,0.85)", borderColor: "rgba(100,255,200,0.3)" }}
+          onPointerDown={(e) => { e.preventDefault(); handleFire(); }}
+        >FIRE</button>
+      </div>
+    </div>
+  );
 }
