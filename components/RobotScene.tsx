@@ -726,7 +726,6 @@ export default function RobotScene() {
         if (bolts.length >= MAX_BOLTS) {
           const old = bolts.shift()!;
           scene.remove(old.mesh);
-          old.mesh.geometry.dispose();
         }
         const mesh = new THREE.Mesh(boltGeo, boltMat);
         mesh.name = `plasmaBolt_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
@@ -868,8 +867,8 @@ export default function RobotScene() {
         const fireBlend = Math.max(0, fireTimer / FIRE_DURATION);
         const ease = fireBlend * fireBlend * (3 - 2 * fireBlend);
 
-        armL.armGroup.rotation.x = Math.sin(t * 1.2) * 0.05 + ease * 1.4;
-        armR.armGroup.rotation.x = Math.sin(t * 1.2 + Math.PI) * 0.05 + ease * 1.4;
+        armL.armGroup.rotation.x = Math.sin(t * 1.2) * 0.05 - ease * 1.4;
+        armR.armGroup.rotation.x = Math.sin(t * 1.2 + Math.PI) * 0.05 - ease * 1.4;
 
         const emitterL = armL.gunGroup.getObjectByName("gunEmitter_L");
         const emitterR = armR.gunGroup.getObjectByName("gunEmitter_R");
@@ -895,7 +894,6 @@ export default function RobotScene() {
           b.mesh.scale.setScalar(s);
           if (b.life > 2.2) {
             scene.remove(b.mesh);
-            b.mesh.geometry.dispose();
             bolts.splice(i, 1);
           }
         }
