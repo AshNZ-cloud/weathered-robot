@@ -753,6 +753,7 @@ export default function RobotScene() {
 
       renderer.domElement.tabIndex = 0;
       renderer.domElement.style.outline = "none";
+      renderer.domElement.focus();
 
       function onPointerDown(e: PointerEvent) {
         if (e.target !== renderer.domElement) return;
@@ -761,13 +762,15 @@ export default function RobotScene() {
       }
 
       function onKeyDown(e: KeyboardEvent) {
-        if (e.code === "Space") {
+        if (e.code === "Space" || e.key === " ") {
           e.preventDefault();
+          e.stopPropagation();
           fireBothGuns();
         }
       }
 
-      window.addEventListener("pointerdown", onPointerDown);
+      document.addEventListener("pointerdown", onPointerDown);
+      document.addEventListener("keydown", onKeyDown);
       window.addEventListener("keydown", onKeyDown);
       renderer.domElement.addEventListener("keydown", onKeyDown);
 
@@ -912,8 +915,10 @@ export default function RobotScene() {
 
       // ---------- Cleanup ----------
       return () => {
-        window.removeEventListener("pointerdown", onPointerDown);
+        document.removeEventListener("pointerdown", onPointerDown);
+        document.removeEventListener("keydown", onKeyDown);
         window.removeEventListener("keydown", onKeyDown);
+        renderer.domElement.removeEventListener("keydown", onKeyDown);
         window.removeEventListener("resize", onResize);
         renderer.setAnimationLoop(null);
         renderer.dispose();
