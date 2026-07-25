@@ -479,7 +479,7 @@ export default function RobotScene() {
       const armR = makeArm("R");
       robot.add(armR.armGroup);
 
-      // Legs
+      // Legs — articulated with thigh and shin groups for walking
       function makeLeg(side: string) {
         const sign = side === "L" ? 1 : -1;
         const legGroup = new THREE.Group();
@@ -503,30 +503,36 @@ export default function RobotScene() {
         knee.position.y = -0.76;
         legGroup.add(knee);
 
+        // Shin group — pivots from the knee position for bending
+        const shinGroup = new THREE.Group();
+        shinGroup.name = `shinGroup_${side}`;
+        shinGroup.position.y = -0.76;
+        legGroup.add(shinGroup);
+
         const shin = new THREE.Mesh(
           new THREE.CylinderGeometry(0.18, 0.15, 0.75, 10),
           midMetal
         );
         shin.name = `shin_${side}`;
-        shin.position.y = -1.15;
+        shin.position.y = -0.39;
         shin.castShadow = true;
-        legGroup.add(shin);
+        shinGroup.add(shin);
 
         const foot = new THREE.Mesh(
           new THREE.BoxGeometry(0.3, 0.16, 0.5),
           jointMetal
         );
         foot.name = `foot_${side}`;
-        foot.position.set(0, -1.58, 0.1);
+        foot.position.set(0, -0.82, 0.1);
         foot.castShadow = true;
-        legGroup.add(foot);
+        shinGroup.add(foot);
 
-        return legGroup;
+        return { legGroup, shinGroup };
       }
       const legL = makeLeg("L");
-      robot.add(legL);
+      robot.add(legL.legGroup);
       const legR = makeLeg("R");
-      robot.add(legR);
+      robot.add(legR.legGroup);
 
       // ---------- SPACESHIP ----------
       const ship = new THREE.Group();
@@ -721,6 +727,9 @@ export default function RobotScene() {
       const MAX_BOLTS = 20;
       let fireTimer = 0;
       const FIRE_DURATION = 0.6;
+      let walkDirection = 0;
+      let walkPhase = 0;
+      const WALK_SPEED = 2.5;
 
       function fireBolt(fromWorldPos: THREE.Vector3, direction: THREE.Vector3) {
         if (bolts.length >= MAX_BOLTS) {
@@ -799,11 +808,26 @@ export default function RobotScene() {
           e.preventDefault();
           e.stopPropagation();
           fireBothGuns();
+        } else if (e.code === "ArrowUp" || e.key === "ArrowUp") {
+          e.preventDefault();
+          walkDirection = 1;
+        } else if (e.code === "ArrowDown" || e.key === "ArrowDown") {
+          e.preventDefault();
+          walkDirection = -1;
+        }
+      }
+
+      function onKeyUp(e: KeyboardEvent) {
+        if (e.code === "ArrowUp" || e.key === "ArrowUp") {
+          if (walkDirection === 1) walkDirection = 0;
+        } else if (e.code === "ArrowDown" || e.key === "ArrowDown") {
+          if (walkDirection === -1) walkDirection = 0;
         }
       }
 
       document.addEventListener("pointerdown", onPointerDown);
       document.addEventListener("keydown", onKeyDown);
+      document.addEventListener("keyup", onKeyUp);
       window.addEventListener("keydown", onKeyDown);
       renderer.domElement.addEventListener("keydown", onKeyDown);
 
@@ -823,7 +847,7 @@ export default function RobotScene() {
         pointer-events: none;
         line-height: 1.5;
       `;
-      info.textContent = `WebGL | Click or press SPACE to fire plasma guns. Drag to orbit, scroll to zoom.`;
+      info.textContent = `WebGL | SPACE to fire plasma guns. UP/DOWN arrows to walk. Drag to orbit, scroll to zoom.`;
       document.body.appendChild(info);
 
       const linkEl = document.createElement("link");
@@ -916,6 +940,31 @@ export default function RobotScene() {
           matR.emissiveIntensity = glowIntensity;
         }
 
+        // ---------- Walk animation ----------
+        if (walkDirection !== 0) {
+          walkPhase += dt * WALK_SPEED * (walkDirection > 0 ? 1 : -1);
+          robot.position.z += walkDirection * dt * 1.5;
+          robot.position.z = Math.max(-12, Math.min(12, robot.position.z));
+        } else {
+          walkPhase *= 0.85;
+        }
+
+        const walkActive = Math.abs(walkPhase) > 0.01 || walkDirection !== 0;
+        const swing = Math.sin(walkPhase);
+        const swing2 = Math.sin(walkPhase + Math.PI);
+
+        if (walkActive) {
+          legL.legGroup.rotation.x = swing * 0.5;
+          legR.legGroup.rotation.x = swing2 * 0.5;
+          legL.shinGroup.rotation.x = Math.max(0, -swing * 0.6);
+          legR.shinGroup.rotation.x = Math.max(0, -swing2 * 0.6);
+        } else {
+          legL.legGroup.rotation.x *= 0.85;
+          legR.legGroup.rotation.x *= 0.85;
+          legL.shinGroup.rotation.x *= 0.85;
+          legR.shinGroup.rotation.x *= 0.85;
+        }
+
         ship.position.y = 2.6 + Math.sin(t * 0.8) * 0.15;
         ship.rotation.z = Math.sin(t * 0.6) * 0.03;
         ship.rotation.x = Math.sin(t * 0.5 + 1) * 0.015;
@@ -949,6 +998,7 @@ export default function RobotScene() {
       return () => {
         document.removeEventListener("pointerdown", onPointerDown);
         document.removeEventListener("keydown", onKeyDown);
+        document.removeEventListener("keyup", onKeyUp);
         window.removeEventListener("keydown", onKeyDown);
         renderer.domElement.removeEventListener("keydown", onKeyDown);
         window.removeEventListener("resize", onResize);
