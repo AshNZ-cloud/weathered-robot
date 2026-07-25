@@ -711,11 +711,11 @@ export default function RobotScene() {
 
       // ---------- Plasma bolt projectiles ----------
       const bolts: { mesh: THREE.Mesh; direction: THREE.Vector3; life: number }[] = [];
-      const boltGeo = new THREE.SphereGeometry(0.08, 10, 8);
+      const boltGeo = new THREE.SphereGeometry(0.12, 10, 8);
       const boltMat = new THREE.MeshStandardMaterial({
         color: 0x66ffee,
         emissive: 0x33ffdd,
-        emissiveIntensity: 3,
+        emissiveIntensity: 4,
       });
 
       const MAX_BOLTS = 20;
@@ -742,12 +742,11 @@ export default function RobotScene() {
 
       function fireBothGuns() {
         fireTimer = FIRE_DURATION;
-        const dirL = new THREE.Vector3(0, 0, 1).applyQuaternion(
-          robot.getWorldQuaternion(new THREE.Quaternion())
-        );
-        const dirR = dirL.clone();
-        fireBolt(getWorldPos(armL.gunGroup), dirL.multiplyScalar(1));
-        fireBolt(getWorldPos(armR.gunGroup), dirR.multiplyScalar(1));
+        const gunForward = new THREE.Vector3(0, 0, 1);
+        const dirL = gunForward.clone().applyQuaternion(armL.gunGroup.getWorldQuaternion(new THREE.Quaternion()));
+        const dirR = gunForward.clone().applyQuaternion(armR.gunGroup.getWorldQuaternion(new THREE.Quaternion()));
+        fireBolt(getWorldPos(armL.gunGroup), dirL);
+        fireBolt(getWorldPos(armR.gunGroup), dirR);
       }
 
       renderer.domElement.tabIndex = 0;
@@ -867,8 +866,8 @@ export default function RobotScene() {
         const fireBlend = Math.max(0, fireTimer / FIRE_DURATION);
         const ease = fireBlend * fireBlend * (3 - 2 * fireBlend);
 
-        armL.armGroup.rotation.x = Math.sin(t * 1.2) * 0.05 - ease * 1.4;
-        armR.armGroup.rotation.x = Math.sin(t * 1.2 + Math.PI) * 0.05 - ease * 1.4;
+        armL.armGroup.rotation.x = Math.sin(t * 1.2) * 0.05 - ease * 1.1;
+        armR.armGroup.rotation.x = Math.sin(t * 1.2 + Math.PI) * 0.05 - ease * 1.1;
 
         const emitterL = armL.gunGroup.getObjectByName("gunEmitter_L");
         const emitterR = armR.gunGroup.getObjectByName("gunEmitter_R");
